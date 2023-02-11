@@ -11,6 +11,10 @@
 #include "plib/gnw/intrface.h"
 #include "plib/gnw/memory.h"
 
+#ifdef __vita__
+#include <psp2/kernel/clib.h>
+#endif
+
 namespace fallout {
 
 static int debug_mono(char* string);
@@ -145,6 +149,13 @@ int debug_printf(const char* format, ...)
     } else {
 #ifdef _DEBUG
         SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, format, args);
+
+#ifdef __vita__
+        char string[260];
+        vsprintf(string, format, args);
+        sceClibPrintf("%s", string);
+#endif
+
 #endif
         rc = -1;
     }

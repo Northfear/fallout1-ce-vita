@@ -8,6 +8,10 @@
 #include "plib/gnw/mouse.h"
 #include "plib/gnw/winmain.h"
 
+#ifdef __vita__
+#include <vita2d.h>
+#endif
+
 namespace fallout {
 
 static int GNW95_init_mode_ex(int width, int height, int bpp);
@@ -33,6 +37,14 @@ SDL_Surface* gSdlTextureSurface = NULL;
 
 // TODO: Remove once migration to update-render cycle is completed.
 FpsLimiter sharedFpsLimiter;
+
+#ifdef __vita__
+vita2d_texture *texBuffer;
+uint8_t *palettedTexturePointer;
+SDL_Rect renderRect;
+SDL_Surface *vitaPaletteSurface = NULL;
+bool vitaFullscreen;
+#endif
 
 // 0x4CACD0
 void mmxEnable(bool enable)
@@ -134,16 +146,77 @@ static int GNW95_init_mode_ex(int width, int height, int bpp)
             if (config_get_value(&resolutionConfig, "MAIN", "SCR_WIDTH", &screenWidth)) {
                 width = screenWidth;
             }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "SCR_WIDTH", VITA_FULLSCREEN_WIDTH);
+                width = VITA_FULLSCREEN_WIDTH;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
 
             int screenHeight;
             if (config_get_value(&resolutionConfig, "MAIN", "SCR_HEIGHT", &screenHeight)) {
                 height = screenHeight;
             }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "SCR_HEIGHT", VITA_FULLSCREEN_HEIGHT);
+                height = VITA_FULLSCREEN_HEIGHT;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
 
             bool windowed;
             if (configGetBool(&resolutionConfig, "MAIN", "WINDOWED", &windowed)) {
                 fullscreen = !windowed;
             }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "WINDOWED", 0);
+                fullscreen = 0;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
+
+#ifdef __vita__
+            // load Vita options here
+            if (width < DEFAULT_WIDTH) {
+                width = DEFAULT_WIDTH;
+            }
+            if (height < DEFAULT_HEIGHT) {
+                height = DEFAULT_HEIGHT;
+            }
+
+            int frontTouch;
+            if (config_get_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", &frontTouch)) {
+                frontTouchpadMode = static_cast<TouchpadMode>(frontTouch);
+            }
+            else
+            {
+                config_set_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", 1);
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+
+            int rearTouch;
+            if (config_get_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", &rearTouch)) {
+                rearTouchpadMode = static_cast<TouchpadMode>(rearTouch);
+            }
+            else
+            {
+                config_set_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", 0);
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+/*
+            // Use FACE_BAR_MODE=1 by default on Vita
+            if (!config_get_value(&resolutionConfig, "IFACE", "IFACE_BAR_MODE", &gInterfaceBarMode)) {
+                config_set_value(&resolutionConfig, "IFACE", "IFACE_BAR_MODE", 1);
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+*/
+#endif
         }
         config_exit(&resolutionConfig);
     }
@@ -180,6 +253,34 @@ static int GNW95_init_mode(int width, int height)
 int GNW95_init_window(int width, int height, bool fullscreen)
 {
     if (gSdlWindow == NULL) {
+#ifdef __vita__
+        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+            return -1;
+        }
+
+        vita2d_init();
+        vita2d_set_vblank_wait(false);
+
+        gSdlWindow = SDL_CreateWindow(GNW95_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+        if (gSdlWindow == NULL) {
+            return -1;
+        }
+
+        vitaFullscreen = fullscreen;
+
+        if (!createRenderer(width, height)) {
+            destroyRenderer();
+
+            SDL_DestroyWindow(gSdlWindow);
+            gSdlWindow = NULL;
+
+            return -1;
+        }
+
+        float resolutionSpeedMod = static_cast<float>(height) / DEFAULT_HEIGHT;
+
+        return 0;
+#else
         SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
 
         if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -205,6 +306,7 @@ int GNW95_init_window(int width, int height, bool fullscreen)
 
             return -1;
         }
+#endif
     }
 
     return 0;
@@ -237,6 +339,9 @@ int GNW95_init_DirectDraw(int width, int height, int bpp)
     }
 
     SDL_SetPaletteColors(gSdlSurface->format->palette, colors, 0, 256);
+#ifdef __vita__
+    updateVita2dPalette(colors, 0, 256);
+#endif
 
     return 0;
 }
@@ -266,7 +371,11 @@ void GNW95_SetPaletteEntries(unsigned char* palette, int start, int count)
         }
 
         SDL_SetPaletteColors(gSdlSurface->format->palette, colors, start, count);
+#ifdef __vita__
+        updateVita2dPalette(colors, start, count);
+#else
         SDL_BlitSurface(gSdlSurface, NULL, gSdlTextureSurface, NULL);
+#endif
     }
 }
 
@@ -284,7 +393,11 @@ void GNW95_SetPalette(unsigned char* palette)
         }
 
         SDL_SetPaletteColors(gSdlSurface->format->palette, colors, 0, 256);
+#ifdef __vita__
+        updateVita2dPalette(colors, 0, 256);
+#else
         SDL_BlitSurface(gSdlSurface, NULL, gSdlTextureSurface, NULL);
+#endif
     }
 }
 
@@ -312,6 +425,9 @@ void GNW95_ShowRect(unsigned char* src, unsigned int srcPitch, unsigned int a3, 
 {
     buf_to_buf(src + srcPitch * srcY + srcX, srcWidth, srcHeight, srcPitch, (unsigned char*)gSdlSurface->pixels + gSdlSurface->pitch * destY + destX, gSdlSurface->pitch);
 
+#ifdef __vita__
+    renderVita2dFrame(gSdlSurface);
+#else
     SDL_Rect srcRect;
     srcRect.x = destX;
     srcRect.y = destY;
@@ -322,6 +438,7 @@ void GNW95_ShowRect(unsigned char* src, unsigned int srcPitch, unsigned int a3, 
     destRect.x = destX;
     destRect.y = destY;
     SDL_BlitSurface(gSdlSurface, &srcRect, gSdlTextureSurface, &destRect);
+#endif
 }
 
 int screenGetWidth()
@@ -343,6 +460,15 @@ int screenGetVisibleHeight()
 
 static bool createRenderer(int width, int height)
 {
+#ifdef __vita__
+    vita2d_texture_set_alloc_memblock_type(SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW);
+    texBuffer = vita2d_create_empty_texture_format(width, height, SCE_GXM_TEXTURE_FORMAT_P8_ABGR);
+    palettedTexturePointer = (uint8_t*)(vita2d_texture_get_datap(texBuffer));
+    memset(palettedTexturePointer, 0, width * height * sizeof(uint8_t));
+    setRenderRect(width, height, vitaFullscreen);
+
+    return true;
+#else
     gSdlRenderer = SDL_CreateRenderer(gSdlWindow, -1, 0);
     if (gSdlRenderer == NULL) {
         return false;
@@ -368,10 +494,19 @@ static bool createRenderer(int width, int height)
     }
 
     return true;
+#endif
 }
 
 static void destroyRenderer()
 {
+#ifdef __vita__
+    vita2d_wait_rendering_done();
+
+    if (texBuffer != nullptr) {
+        vita2d_free_texture(texBuffer);
+        texBuffer = nullptr;
+    }
+#else
     if (gSdlTextureSurface != NULL) {
         SDL_FreeSurface(gSdlTextureSurface);
         gSdlTextureSurface = NULL;
@@ -386,6 +521,7 @@ static void destroyRenderer()
         SDL_DestroyRenderer(gSdlRenderer);
         gSdlRenderer = NULL;
     }
+#endif
 }
 
 void handleWindowSizeChanged()
@@ -396,10 +532,78 @@ void handleWindowSizeChanged()
 
 void renderPresent()
 {
+#ifdef __vita__
+    renderVita2dFrame(gSdlSurface);
+#else
     SDL_UpdateTexture(gSdlTexture, NULL, gSdlTextureSurface->pixels, gSdlTextureSurface->pitch);
     SDL_RenderClear(gSdlRenderer);
     SDL_RenderCopy(gSdlRenderer, gSdlTexture, NULL, NULL);
     SDL_RenderPresent(gSdlRenderer);
+#endif
 }
+
+#ifdef __vita__
+void renderVita2dFrame(SDL_Surface *surface)
+{
+    memcpy(palettedTexturePointer, surface->pixels, surface->w * surface->h * sizeof(uint8_t));
+    vita2d_start_drawing();
+    vita2d_draw_rectangle(0, 0, VITA_FULLSCREEN_WIDTH, VITA_FULLSCREEN_HEIGHT, 0xff000000);
+    vita2d_draw_texture_scale(texBuffer, renderRect.x, renderRect.y, (float)(renderRect.w) / surface->w, (float)(renderRect.h) / surface->h);
+    vita2d_end_drawing();
+    vita2d_swap_buffers();
+}
+
+void updateVita2dPalette(SDL_Color *colors, int start, int count)
+{
+    uint32_t palette32Bit[count];
+
+    if (vitaPaletteSurface == NULL) {
+        vitaPaletteSurface = SDL_CreateRGBSurface(0, 1, 1, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    }
+
+    for ( size_t i = 0; i < count; ++i ) {
+        palette32Bit[i] = SDL_MapRGBA(vitaPaletteSurface->format, colors[i].r, colors[i].g, colors[i].b, colors[i].a);
+    }
+
+    memcpy(vita2d_texture_get_palette(texBuffer) + start * sizeof(uint32_t), palette32Bit, sizeof(uint32_t) * count);
+}
+
+void setRenderRect(int width, int height, bool fullscreen)
+{
+    renderRect.x = 0;
+    renderRect.y = 0;
+    renderRect.w = width;
+    renderRect.h = height;
+    vita2d_texture_set_filters(texBuffer, SCE_GXM_TEXTURE_FILTER_POINT, SCE_GXM_TEXTURE_FILTER_POINT);
+
+    if (width != VITA_FULLSCREEN_WIDTH || height != VITA_FULLSCREEN_HEIGHT)	{
+        if (fullscreen) {
+            //resize to fullscreen
+            if ((static_cast<float>(VITA_FULLSCREEN_WIDTH) / VITA_FULLSCREEN_HEIGHT) >= (static_cast<float>(width) / height)) {
+                float scale = static_cast<float>(VITA_FULLSCREEN_HEIGHT) / height;
+                renderRect.w = width * scale;
+                renderRect.h = VITA_FULLSCREEN_HEIGHT;
+                renderRect.x = (VITA_FULLSCREEN_WIDTH - renderRect.w) / 2;
+            } else {
+                float scale = static_cast<float>(VITA_FULLSCREEN_WIDTH) / width;
+                renderRect.w = VITA_FULLSCREEN_WIDTH;
+                renderRect.h = height * scale;
+                renderRect.y = (VITA_FULLSCREEN_HEIGHT - renderRect.h) / 2;
+            }
+
+            vita2d_texture_set_filters(texBuffer, SCE_GXM_TEXTURE_FILTER_LINEAR, SCE_GXM_TEXTURE_FILTER_LINEAR);
+        } else {
+            //center game area
+            renderRect.x = (VITA_FULLSCREEN_WIDTH - width) / 2;
+            renderRect.y = (VITA_FULLSCREEN_HEIGHT - height) / 2;
+        }
+    }
+}
+
+SDL_Rect getRenderRect()
+{
+    return renderRect;
+}
+#endif
 
 } // namespace fallout

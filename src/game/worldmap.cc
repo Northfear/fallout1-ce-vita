@@ -875,6 +875,10 @@ static unsigned char WorldGrid[31][29];
 // 0x6713C4
 static unsigned char wwin_flag;
 
+#ifdef __vita__
+static int map_initialized = 0;
+#endif
+
 // 0x4AA110
 int init_world_map()
 {
@@ -2766,6 +2770,10 @@ static int InitWorldMapData()
 
     bx_enable = disable_box_bar_win();
 
+#ifdef __vita__
+    map_initialized = 1;
+#endif
+
     return 0;
 }
 
@@ -2784,6 +2792,10 @@ static void UnInitWorldMapData()
     }
 
     intface_update_hit_points(false);
+
+#ifdef __vita__
+    map_initialized = 0;
+#endif
 }
 
 // 0x4AD264
@@ -3767,5 +3779,34 @@ static void BlackOut()
 
     memset(world_buf, colorTable[0], WM_WINDOW_WIDTH * WM_WINDOW_HEIGHT);
 }
+
+#ifdef __vita__
+void wm_vita_scroll(int dx, int dy)
+{
+    /*
+    if (map_initialized)
+    {
+        if (dx != 0 || dy != 0) {
+            viewport_x += 16 * dx;
+            viewport_y += 16 * dy;
+
+            if (viewport_x < 0) {
+                viewport_x = 0;
+            } else if (viewport_x > VIEWPORT_MAX_X) {
+                viewport_x = VIEWPORT_MAX_X;
+            }
+
+            if (viewport_y < 0) {
+                viewport_y = 0;
+            } else if (viewport_y > VIEWPORT_MAX_Y) {
+                viewport_y = VIEWPORT_MAX_Y;
+            }
+
+            should_redraw = 1;
+        }
+    }
+    */
+}
+#endif
 
 } // namespace fallout

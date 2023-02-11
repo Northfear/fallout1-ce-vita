@@ -448,9 +448,11 @@ void mouse_info()
         y = 0;
     }
 
+#ifndef __vita__
     // Adjust for mouse senstivity.
     x = (int)(x * mouse_sensitivity);
     y = (int)(y * mouse_sensitivity);
+#endif
 
     if (vcr_state == VCR_STATE_PLAYING) {
         if (((vcr_terminate_flags & VCR_TERMINATE_ON_MOUSE_PRESS) != 0 && buttons != 0)
@@ -466,6 +468,8 @@ void mouse_info()
 
     mouse_simulate_input(x, y, buttons);
 
+// breaks mouse button emulation on Vita
+#ifndef __vita__
     // TODO: Move to `_mouse_simulate_input`.
     // TODO: Record wheel event in VCR.
     gMouseWheelX = mouseData.wheelX;
@@ -475,6 +479,7 @@ void mouse_info()
         mouse_buttons |= MOUSE_EVENT_WHEEL;
         raw_buttons |= MOUSE_EVENT_WHEEL;
     }
+#endif
 }
 
 // 0x4B4ECC
@@ -825,5 +830,22 @@ void convertMouseWheelToArrowKey(int* keyCodePtr)
         }
     }
 }
+
+#ifdef __vita__
+double mouseGetSensitivity()
+{
+    return mouse_sensitivity;
+}
+
+int mouseGetMouseCursorX()
+{
+    return mouse_x;
+}
+
+int mouseGetMouseCursorY()
+{
+    return mouse_y;
+}
+#endif
 
 } // namespace fallout

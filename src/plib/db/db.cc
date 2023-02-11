@@ -2742,6 +2742,8 @@ static inline bool fileFindIsDirectory(DB_FIND_DATA* findData)
     return (findData->ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #elif defined(__WATCOMC__)
     return (findData->entry->d_attr & _A_SUBDIR) != 0;
+#elif defined(__vita__)
+    return SCE_S_ISDIR(findData->entry->d_stat.st_mode);
 #else
     return findData->entry->d_type == DT_DIR;
 #endif

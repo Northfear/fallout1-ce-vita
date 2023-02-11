@@ -1,3 +1,70 @@
+# Fallout Community Edition port for PS Vita
+
+## Install
+Download fallout-ce.vpk file and install it to your PS Vita.
+
+Copy ```MASTER.DAT```, ```CRITTER.DAT``` and ```DATA``` folder from the installed Fallout game folder into to ```ux0:data/fallout/```. Copy ```fallout.cfg``` too, if you're using non-english Fallout version (or make sure that ```language``` setting is properly set in it (```language=german```, ```language=french```, etc)).
+
+```diff
+! ⚠️ Please note that the copied file names should be upper case.
+```
+
+## Building
+
+### Prerequisites
+- VitaSDK
+- SDL2
+
+### Build
+```
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=None
+make
+```
+
+## Port info
+
+### Controls
+
+- Left analog stick - Cursor movement
+- Right analog stick - Map scrolling
+- × - Left mouse button
+- ○ - Right mouse button
+- □ - Skill list/selection
+- △ - Inventory
+- D-Pad Up - Character screen
+- D-Pad Down - Pip-Boy
+- D-Pad Left - Start combat
+- D-Pad Right - End turn
+- L1 - Toggle active item
+- R1 (hold) - Cursor movement speedup
+- SELECT - Esc
+- START - On screen keyboard
+- ○ + L1 - Quick save
+- ○ + R1 - Quick load
+
+### Touchpad controls
+
+You can change the control mode of front or rear touchpad by editing ```ux0:data/fallout/f1_res.ini``` and changing ```FRONT_TOUCH_MODE``` and ```REAR_TOUCH_MODE``` parameters.
+
+Following touchpad modes are supported:
+
+```0``` - Touchpad disabled
+
+```1``` - Direct control (front touchpad only)
+
+```2``` - Trackpad control
+
+In trackpad control mode you can use double tap to "click" left mouse button in the current cursor position and triple tap to "click" right mouse button.
+
+### Other
+
+You can change the game resolution by editing ```ux0:data/fallout/f1_res.ini``` file and modifying ```SCR_WIDTH``` and ```SCR_HEIGHT``` parameters. Recommended resolutions are ```640x480```, ```848x480``` and ```960x544```.
+
+Cursor speed can be changed with ```MOUSE SENSITIVITY``` slider in game preferences.
+
+Fallout CE is still in early stages of development, so all kinds of bugs and crashes are to be expected.
+
 # Fallout Community Edition
 
 Fallout Community Edition is a fully working re-implementation of Fallout, with the same original gameplay, engine bugfixes, and some quality of life improvements, that works (mostly) hassle-free on multiple platforms.

@@ -1,0 +1,72 @@
+name: PS Vita Development Build
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  create_dev_release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Development release
+      if: ${{ github.event_name != 'pull_request' }}
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Development Build"
+
+  build-psv:
+    name: Make (PS Vita)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        sudo apt-get -y update
+        sudo apt-get -y install libgcc1 gettext
+
+    - name: Setup Vita SDK
+      continue-on-error: true
+      run: |
+        git clone --depth 1 https://github.com/vitasdk/vdpm
+        cd vdpm
+        export PATH="$VITASDK/bin:$PATH"
+        ./bootstrap-vitasdk.sh
+        ./install-all.sh
+        rm -rf ~/.vitasdk-cache
+      env:
+        VITASDK: /usr/local/vitasdk
+
+    - name: Build
+      run: |
+        export PATH="$VITASDK/bin:$PATH"
+        cmake -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=None -B build
+        cmake --build build -- -j4
+      env:
+        VITASDK: /usr/local/vitasdk
+
+    - name: Upload development release
+      if: ${{ github.event_name != 'pull_request' }}
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Development Build
+        tag_name: "latest"
+        prerelease: true
+        files: |
+          build/fallout2-ce.vpk
+          build/fallout2-ce
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+#    - name: Upload tagged release
+#      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+#      uses: softprops/action-gh-release@v1
+#      with:
+#        files: |
+#          build/fallout2-ce.vpk
+#          build/fallout2-ce
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
