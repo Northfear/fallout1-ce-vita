@@ -56,8 +56,8 @@ jobs:
         tag_name: "latest"
         prerelease: true
         files: |
-          build/fallout2-ce.vpk
-          build/fallout2-ce
+          build/fallout-ce.vpk
+          build/fallout-ce
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -66,7 +66,7 @@ jobs:
 #      uses: softprops/action-gh-release@v1
 #      with:
 #        files: |
-#          build/fallout2-ce.vpk
-#          build/fallout2-ce
+#          build/fallout-ce.vpk
+#          build/fallout-ce
 #      env:
 #        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
