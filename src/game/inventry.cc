@@ -2246,7 +2246,7 @@ void use_inventory_on(Object* a1)
                     stack_offset[curr_stack] = 0;
                 }
             }
-            display_inventory(stack_offset[curr_stack], -1, 1);
+            display_inventory(stack_offset[curr_stack], -1, INVENTORY_WINDOW_TYPE_USE_ITEM_ON);
             break;
         case 2500:
             container_exit(keyCode, INVENTORY_WINDOW_TYPE_USE_ITEM_ON);
@@ -2263,7 +2263,7 @@ void use_inventory_on(Object* a1)
                     if (immode == INVENTORY_WINDOW_CURSOR_ARROW) {
                         inven_action_cursor(keyCode, INVENTORY_WINDOW_TYPE_USE_ITEM_ON);
                     } else {
-                        int inventoryItemIndex = pud->length - (stack_offset[curr_stack] + keyCode - 1000 + 1);
+                        int inventoryItemIndex = stack_offset[curr_stack] + keyCode - 1000;
                         if (inventoryItemIndex < pud->length) {
                             InventoryItem* inventoryItem = &(pud->items[inventoryItemIndex]);
                             if (isInCombat()) {
@@ -2295,12 +2295,12 @@ void use_inventory_on(Object* a1)
                     if (wheelY > 0) {
                         if (stack_offset[curr_stack] > 0) {
                             stack_offset[curr_stack] -= 1;
-                            display_inventory(stack_offset[curr_stack], -1, INVENTORY_WINDOW_TYPE_NORMAL);
+                            display_inventory(stack_offset[curr_stack], -1, INVENTORY_WINDOW_TYPE_USE_ITEM_ON);
                         }
                     } else if (wheelY < 0) {
                         if (inven_cur_disp + stack_offset[curr_stack] < pud->length) {
                             stack_offset[curr_stack] += 1;
-                            display_inventory(stack_offset[curr_stack], -1, INVENTORY_WINDOW_TYPE_NORMAL);
+                            display_inventory(stack_offset[curr_stack], -1, INVENTORY_WINDOW_TYPE_USE_ITEM_ON);
                         }
                     }
                 }
