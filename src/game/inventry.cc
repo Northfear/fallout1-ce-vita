@@ -207,7 +207,7 @@ static int inventry_msg_load();
 static int inventry_msg_unload();
 static void display_inventory_info(Object* item, int quantity, unsigned char* dest, int pitch, bool a5);
 static void inven_update_lighting(Object* a1);
-static int barter_compute_value(Object* a1, Object* a2);
+static int barter_compute_value(Object* buyer, Object* seller);
 static int barter_attempt_transaction(Object* a1, Object* a2, Object* a3, Object* a4);
 static void barter_move_inventory(Object* a1, int quantity, int a3, int a4, Object* a5, Object* a6, bool a7);
 static void barter_move_from_table_inventory(Object* a1, int quantity, int a3, Object* a4, Object* a5, bool a6);
@@ -1465,6 +1465,48 @@ void display_inventory(int first_item_index, int selected_index, int inventoryWi
         }
     }
 
+    // CE: Show items weight.
+    if (inventoryWindowType == INVENTORY_WINDOW_TYPE_LOOT) {
+        char formattedText[20];
+
+        int oldFont = text_curr();
+        text_font(101);
+
+        CacheEntry* key;
+        int backgroundFid = art_id(OBJ_TYPE_INTERFACE, 114, 0, 0, 0);
+        unsigned char* data = art_ptr_lock_data(backgroundFid, 0, 0, &key);
+        if (data != NULL) {
+            int x = INVENTORY_LOOT_LEFT_SCROLLER_X;
+            int y = INVENTORY_LOOT_LEFT_SCROLLER_Y + inven_cur_disp * INVENTORY_SLOT_HEIGHT + 2;
+            buf_to_buf(data + pitch * y + x,
+                INVENTORY_SLOT_WIDTH,
+                text_height(),
+                pitch,
+                windowBuffer + pitch * y + x,
+                pitch);
+            art_ptr_unlock(key);
+        }
+
+        Object* object = stack[0];
+
+        int color = colorTable[992];
+        if (PID_TYPE(object->pid) == OBJ_TYPE_CRITTER) {
+            int carryWeight = stat_level(object, STAT_CARRY_WEIGHT);
+            int inventoryWeight = item_total_weight(object);
+            snprintf(formattedText, sizeof(formattedText), "%d/%d", inventoryWeight, carryWeight);
+        } else {
+            int inventoryWeight = item_total_weight(object);
+            snprintf(formattedText, sizeof(formattedText), "%d", inventoryWeight);
+        }
+
+        int width = text_width(formattedText);
+        int x = INVENTORY_LOOT_LEFT_SCROLLER_X + INVENTORY_SLOT_WIDTH / 2 - width / 2;
+        int y = INVENTORY_LOOT_LEFT_SCROLLER_Y + INVENTORY_SLOT_HEIGHT * inven_cur_disp + 2;
+        text_to_buf(windowBuffer + pitch * y + x, formattedText, width, pitch, color);
+
+        text_font(oldFont);
+    }
+
     win_draw(i_wid);
 }
 
@@ -1519,6 +1561,55 @@ void display_target_inventory(int first_item_index, int selected_index, Inventor
         display_inventory_info(inventoryItem->item, inventoryItem->quantity, windowBuffer + offset, pitch, index == selected_index);
 
         y += INVENTORY_SLOT_HEIGHT;
+    }
+
+    // CE: Show items weight.
+    if (inventoryWindowType == INVENTORY_WINDOW_TYPE_LOOT) {
+        char formattedText[20];
+        formattedText[0] = '\0';
+
+        int oldFont = text_curr();
+        text_font(101);
+
+        CacheEntry* key;
+        int backgroundFid = art_id(OBJ_TYPE_INTERFACE, 114, 0, 0, 0);
+        unsigned char* data = art_ptr_lock_data(backgroundFid, 0, 0, &key);
+        if (data != NULL) {
+            int x = INVENTORY_LOOT_RIGHT_SCROLLER_X;
+            int y = INVENTORY_LOOT_RIGHT_SCROLLER_Y + INVENTORY_SLOT_HEIGHT * inven_cur_disp + 2;
+            buf_to_buf(data + pitch * y + x,
+                INVENTORY_SLOT_WIDTH,
+                text_height(),
+                pitch,
+                windowBuffer + pitch * y + x,
+                pitch);
+            art_ptr_unlock(key);
+        }
+
+        Object* object = target_stack[target_curr_stack];
+
+        int color = colorTable[992];
+        if (PID_TYPE(object->pid) == OBJ_TYPE_CRITTER) {
+            int currentWeight = item_total_weight(object);
+            int maxWeight = stat_level(object, STAT_CARRY_WEIGHT);
+            snprintf(formattedText, sizeof(formattedText), "%d/%d", currentWeight, maxWeight);
+        } else if (PID_TYPE(object->pid) == OBJ_TYPE_ITEM) {
+            if (item_get_type(object) == ITEM_TYPE_CONTAINER) {
+                int currentSize = item_c_curr_size(object);
+                int maxSize = item_c_max_size(object);
+                snprintf(formattedText, sizeof(formattedText), "%d/%d", currentSize, maxSize);
+            }
+        } else {
+            int inventoryWeight = item_total_weight(object);
+            snprintf(formattedText, sizeof(formattedText), "%d", inventoryWeight);
+        }
+
+        int width = text_width(formattedText);
+        int x = INVENTORY_LOOT_RIGHT_SCROLLER_X + INVENTORY_SLOT_WIDTH / 2 - width / 2;
+        int y = INVENTORY_LOOT_RIGHT_SCROLLER_Y + INVENTORY_SLOT_HEIGHT * inven_cur_disp + 2;
+        text_to_buf(windowBuffer + pitch * y + x, formattedText, width, pitch, color);
+
+        text_font(oldFont);
     }
 }
 
@@ -2266,21 +2357,7 @@ void use_inventory_on(Object* a1)
                         int inventoryItemIndex = stack_offset[curr_stack] + keyCode - 1000;
                         if (inventoryItemIndex < pud->length) {
                             InventoryItem* inventoryItem = &(pud->items[inventoryItemIndex]);
-                            if (isInCombat()) {
-                                if (obj_dude->data.critter.combat.ap >= 2) {
-                                    if (action_use_an_item_on_object(obj_dude, a1, inventoryItem->item) != -1) {
-                                        int actionPoints = obj_dude->data.critter.combat.ap;
-                                        if (actionPoints < 2) {
-                                            obj_dude->data.critter.combat.ap = 0;
-                                        } else {
-                                            obj_dude->data.critter.combat.ap = actionPoints - 2;
-                                        }
-                                        intface_update_move_points(obj_dude->data.critter.combat.ap);
-                                    }
-                                }
-                            } else {
-                                action_use_an_item_on_object(obj_dude, a1, inventoryItem->item);
-                            }
+                            action_use_an_item_on_object(stack[0], a1, inventoryItem->item);
                             keyCode = KEY_ESCAPE;
                         } else {
                             keyCode = -1;
@@ -2328,7 +2405,7 @@ Object* inven_right_hand(Object* critter)
     Inventory* inventory;
     Object* item;
 
-    if (i_rhand != NULL) {
+    if (i_rhand != NULL && critter == inven_dude) {
         return i_rhand;
     }
 
@@ -2350,7 +2427,7 @@ Object* inven_left_hand(Object* critter)
     Inventory* inventory;
     Object* item;
 
-    if (i_lhand != NULL) {
+    if (i_lhand != NULL && critter == inven_dude) {
         return i_lhand;
     }
 
@@ -2372,7 +2449,7 @@ Object* inven_worn(Object* critter)
     Inventory* inventory;
     Object* item;
 
-    if (i_worn != NULL) {
+    if (i_worn != NULL && critter == inven_dude) {
         return i_worn;
     }
 
@@ -2657,10 +2734,18 @@ void display_stats()
     // Total wt:
     messageListItem.num = 20;
     if (message_search(&inventry_message_file, &messageListItem)) {
-        int inventoryWeight = item_total_weight(stack[0]);
-        snprintf(formattedText, sizeof(formattedText), "%s %d", messageListItem.text, inventoryWeight);
+        if (PID_TYPE(stack[0]->pid) == OBJ_TYPE_CRITTER) {
+            int carryWeight = stat_level(stack[0], STAT_CARRY_WEIGHT);
+            int inventoryWeight = item_total_weight(stack[0]);
+            snprintf(formattedText, sizeof(formattedText), "%s %d/%d", messageListItem.text, inventoryWeight, carryWeight);
 
-        text_to_buf(windowBuffer + offset + 30, formattedText, 80, INVENTORY_WINDOW_WIDTH, colorTable[992]);
+            text_to_buf(windowBuffer + offset + 15, formattedText, 120, INVENTORY_WINDOW_WIDTH, colorTable[992]);
+        } else {
+            int inventoryWeight = item_total_weight(stack[0]);
+            snprintf(formattedText, sizeof(formattedText), "%s %d", messageListItem.text, inventoryWeight);
+
+            text_to_buf(windowBuffer + offset + 30, formattedText, 80, INVENTORY_WINDOW_WIDTH, colorTable[992]);
+        }
     }
 
     text_font(oldFont);
@@ -4148,32 +4233,27 @@ int move_inventory(Object* a1, int a2, Object* a3, bool a4)
 }
 
 // 0x467AD0
-static int barter_compute_value(Object* a1, Object* a2)
+static int barter_compute_value(Object* buyer, Object* seller)
 {
-    int cost = item_total_cost(btable);
-    int caps = item_caps_total(btable);
-    int v14 = cost - caps;
+    int mod = 100;
 
-    double bonus = 0.0;
-    if (a1 == obj_dude) {
+    if (buyer == obj_dude) {
         if (perk_level(PERK_MASTER_TRADER)) {
-            bonus = 25.0;
+            mod += 25;
         }
     }
 
-    int partyBarter = skill_level(a1, SKILL_BARTER);
-    int npcBarter = skill_level(a2, SKILL_BARTER);
+    int buyer_mod = skill_level(buyer, SKILL_BARTER);
+    int seller_mod = skill_level(seller, SKILL_BARTER);
+    mod += buyer_mod - seller_mod + barter_mod;
 
-    // TODO: Check in debugger, complex math, probably uses floats, not doubles.
-    double v1 = (barter_mod + 100.0 - bonus) * 0.01;
-    double v2 = (160.0 + npcBarter) / (160.0 + partyBarter) * (v14 * 2.0);
-    if (v1 < 0) {
-        // TODO: Probably 0.01 as float.
-        v1 = 0.0099999998;
-    }
+    mod = std::clamp(mod, 10, 300);
 
-    int rounded = (int)(v1 * v2 + caps);
-    return rounded;
+    int cost = item_total_cost(btable);
+    int caps = item_caps_total(btable);
+
+    // Exclude caps before applying modifier (since it only affect items).
+    return 100 * (cost - caps) / mod + caps;
 }
 
 // 0x467B70
@@ -4540,13 +4620,13 @@ void barter_inventory(int win, Object* a2, Object* a3, Object* a4, int a5)
     int npcReactionType = reaction_to_level(npcReactionValue);
     switch (npcReactionType) {
     case NPC_REACTION_BAD:
-        modifier = 25;
+        modifier = -25;
         break;
     case NPC_REACTION_NEUTRAL:
         modifier = 0;
         break;
     case NPC_REACTION_GOOD:
-        modifier = -15;
+        modifier = 50;
         break;
     default:
         assert(false && "Should be unreachable");

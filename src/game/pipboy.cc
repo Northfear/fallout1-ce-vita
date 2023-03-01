@@ -1587,21 +1587,16 @@ static int PrintAMelevList(int a1)
         }
     }
 
-    for (int map = 0; map < 5; map++) {
-        if (map == amcty_indx) {
-            continue;
-        }
-
-        if (get_map_idx_same(amcty_indx, map) == -1) {
-            continue;
-        }
-
-        for (int elevation = 0; elevation < ELEVATION_COUNT; elevation++) {
-            if (automapHeader->offsets[map][elevation] > 0) {
-                sortlist[line].name = map_get_elev_idx(map, elevation);
-                sortlist[line].value = elevation;
-                sortlist[line].field_6 = map;
-                line++;
+    for (int index = 0; index < 5; index++) {
+        int map = get_map_idx_same(amcty_indx, index);
+        if (map != -1) {
+            for (int elevation = 0; elevation < ELEVATION_COUNT; elevation++) {
+                if (automapHeader->offsets[map][elevation] > 0) {
+                    sortlist[line].name = map_get_elev_idx(map, elevation);
+                    sortlist[line].value = elevation;
+                    sortlist[line].field_6 = map;
+                    line++;
+                }
             }
         }
     }
@@ -2020,7 +2015,12 @@ static void AddHotLines(int start, int count, bool add_back_button)
 static void NixHotLines()
 {
     if (hot_line_count != 0) {
-        for (int index = hot_line_start; index < hot_line_start + hot_line_count; index++) {
+        int end = hot_line_start + hot_line_count;
+        if (end > 20) {
+            end = 20;
+        }
+
+        for (int index = hot_line_start; index < end; index++) {
             win_delete_button(HotLines[index]);
         }
     }

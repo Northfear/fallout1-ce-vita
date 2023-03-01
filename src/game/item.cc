@@ -1398,9 +1398,7 @@ int item_w_mp_cost(Object* critter, int hit_mode, bool aiming)
 
         if (critter == obj_dude) {
             if (trait_level(TRAIT_FAST_SHOT)) {
-                if (item_w_range(critter, hit_mode) > 2) {
-                    action_points -= 1;
-                }
+                action_points -= 1;
             }
         }
     }
@@ -1563,7 +1561,7 @@ int item_w_called_shot(Object* critter, int hit_mode)
     if (damage_type == DAMAGE_TYPE_EXPLOSION
         || damage_type == DAMAGE_TYPE_FIRE
         || damage_type == DAMAGE_TYPE_EMP
-        || (damage_type == ANIM_THROW_ANIM && damage_type == DAMAGE_TYPE_PLASMA)) {
+        || (anim == ANIM_THROW_ANIM && damage_type == DAMAGE_TYPE_PLASMA)) {
         return 0;
     }
 

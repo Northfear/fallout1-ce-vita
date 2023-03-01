@@ -150,6 +150,13 @@ bool dxinput_get_mouse_state(MouseData* mouseState)
 
     return true;
 #endif
+    // CE: This function is sometimes called outside loops calling `get_input`
+    // and subsequently `GNW95_process_message`, so mouse events might not be
+    // handled by SDL yet.
+    //
+    // TODO: Move mouse events processing into `GNW95_process_message` and
+    // update mouse position manually.
+    SDL_PumpEvents();
 
     if (gLastInputType == INPUT_TYPE_TOUCH) {
         mouseState->x = gTouchMouseDeltaX;
