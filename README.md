@@ -5,10 +5,6 @@ Download fallout-ce.vpk file and install it to your PS Vita.
 
 Copy ```MASTER.DAT```, ```CRITTER.DAT``` and ```DATA``` folder from the installed Fallout game folder into to ```ux0:data/fallout/```. Copy ```fallout.cfg``` too, if you're using non-english Fallout version (or make sure that ```language``` setting is properly set in it (```language=german```, ```language=french```, etc)).
 
-```diff
-! ⚠️ Please note that the copied file names should be upper case.
-```
-
 ## Building
 
 ### Prerequisites
