@@ -160,10 +160,6 @@ int worldmap_script_jump(int city, int a2);
 int xlate_mapidx_to_town(int map_idx);
 int PlayCityMapMusic();
 
-#ifdef __vita__
-void wm_vita_scroll(int dx, int dy);
-#endif
-
 } // namespace fallout
 
 #endif /* FALLOUT_GAME_WORLDMAP_H_ */

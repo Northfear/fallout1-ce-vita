@@ -29,18 +29,6 @@ bool dxinput_flush_keyboard_buffer();
 bool dxinput_read_keyboard_buffer(KeyboardData* keyboardData);
 
 void handleMouseEvent(SDL_Event* event);
-void handleTouchEvent(SDL_Event* event);
-
-#ifdef __vita__
-enum TouchpadMode
-{
-    TOUCH_DISABLED = 0,
-    TOUCH_DIRECT = 1,
-    TOUCH_TRACKPAD = 2
-};
-
-void handleTouchEventDirect(const SDL_TouchFingerEvent& event);
-#endif
 
 } // namespace fallout
 

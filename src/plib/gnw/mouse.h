@@ -67,8 +67,6 @@ void convertMouseWheelToArrowKey(int* keyCodePtr);
 
 #ifdef __vita__
 double mouseGetSensitivity();
-int mouseGetMouseCursorX();
-int mouseGetMouseCursorY();
 #endif
 
 } // namespace fallout

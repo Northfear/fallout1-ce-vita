@@ -62,16 +62,9 @@ void endTextInput();
 
 #ifdef __vita__
 extern SDL_GameController* gameController;
-extern float gTouchMouseDeltaX;
-extern float gTouchMouseDeltaY;
-extern uint8_t numTouches;
-extern uint8_t delayedTouch;
-extern TouchpadMode frontTouchpadMode;
-extern TouchpadMode rearTouchpadMode;
 
 void openController();
 void closeController();
-void handleTouchEventDirect(const SDL_TouchFingerEvent& event);
 void processControllerAxisMotion();
 void handleControllerAxisEvent(const SDL_ControllerAxisEvent& motion);
 void handleControllerButtonEvent(const SDL_ControllerButtonEvent& button);

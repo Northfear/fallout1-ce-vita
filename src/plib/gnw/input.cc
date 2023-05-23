@@ -14,12 +14,12 @@
 #include "plib/gnw/memory.h"
 #include "plib/gnw/svga.h"
 #include "plib/gnw/text.h"
+#include "plib/gnw/touch.h"
 #include "plib/gnw/vcr.h"
 #include "plib/gnw/winmain.h"
 
 #ifdef __vita__
 #include "game/map.h"
-#include "game/worldmap.h"
 #endif
 
 namespace fallout {
@@ -147,11 +147,12 @@ int16_t controllerLeftYAxis = 0;
 int16_t controllerRightXAxis = 0;
 int16_t controllerRightYAxis = 0;
 uint32_t lastControllerTime = 0;
-SDL_FingerID firstFingerId = 0;
 int32_t mapXScroll = 0;
 int32_t mapYScroll = 0;
 float cursorSpeedup = 1.0f;
 float resolutionSpeedMod = 1.0f;
+float controllerLeftoverX = 0;
+float controllerLeftoverY = 0;
 
 SceWChar16 libime_out[SCE_IME_MAX_PREEDIT_LENGTH + SCE_IME_MAX_TEXT_LENGTH + 1];
 static char libime_initval[8] = { 1 };
@@ -1141,12 +1142,13 @@ void GNW95_process_message()
             handleMouseEvent(&e);
             break;
         case SDL_FINGERDOWN:
+            touch_handle_start(&(e.tfinger));
+            break;
         case SDL_FINGERMOTION:
+            touch_handle_move(&(e.tfinger));
+            break;
         case SDL_FINGERUP:
-#ifdef __vita__
-            handleTouchEventDirect(e.tfinger);
-#endif
-            handleTouchEvent(&e);
+            touch_handle_end(&(e.tfinger));
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP:
@@ -1209,9 +1211,9 @@ void GNW95_process_message()
         sceImeUpdate();
     }
     map_scroll(mapXScroll, mapYScroll);
-    wm_vita_scroll(mapXScroll, mapYScroll);
     processControllerAxisMotion();
 #endif
+    touch_process_gesture();
 
     if (GNW95_isActive && !kb_is_disabled()) {
         // NOTE: Uninline
@@ -1337,51 +1339,32 @@ void closeController()
     }
 }
 
-void handleTouchEventDirect(const SDL_TouchFingerEvent& event)
-{
-    // ignore back touchpad
-    if (event.touchId == 0 && frontTouchpadMode != TouchpadMode::TOUCH_DIRECT || event.touchId == 1) {
-        return;
-    }
-
-    if (event.type == SDL_FINGERDOWN) {
-        ++numTouches;
-        if (numTouches == 1) {
-            delayedTouch = 0;
-            firstFingerId = event.fingerId;
-        }
-    } else if (event.type == SDL_FINGERUP) {
-        --numTouches;
-    }
-
-    if (firstFingerId == event.fingerId) {
-        int width = screenGetWidth();
-        int height = screenGetHeight();
-
-        int touchPosX = static_cast<float>(VITA_FULLSCREEN_WIDTH * event.x - getRenderRect().x) *
-                                    (static_cast<float>(width) / getRenderRect().w);
-        int touchPosY = static_cast<float>(VITA_FULLSCREEN_HEIGHT * event.y - getRenderRect().y) *
-                                    (static_cast<float>(height) / getRenderRect().h);
-
-        gTouchMouseDeltaX = touchPosX - mouseGetMouseCursorX();
-        gTouchMouseDeltaY = touchPosY - mouseGetMouseCursorY();
-    }
-}
-
 void processControllerAxisMotion()
 {
     const uint32_t currentTime = SDL_GetTicks();
-    const float deltaTime = currentTime - lastControllerTime;
+    const uint32_t deltaTime = currentTime - lastControllerTime;
     lastControllerTime = currentTime;
 
     if (controllerLeftXAxis != 0 || controllerLeftYAxis != 0) {
         const int16_t xSign = (controllerLeftXAxis > 0) - (controllerLeftXAxis < 0);
         const int16_t ySign = (controllerLeftYAxis > 0) - (controllerLeftYAxis < 0);
 
-        gTouchMouseDeltaX += std::pow(std::abs(controllerLeftXAxis), CONTROLLER_AXIS_SPEEDUP) * xSign * deltaTime
-                            * cursorSpeedup * resolutionSpeedMod * mouseGetSensitivity() * CONTROLLER_SPEED_MOD;
-        gTouchMouseDeltaY += std::pow(std::abs(controllerLeftYAxis), CONTROLLER_AXIS_SPEEDUP) * ySign * deltaTime
-                            * cursorSpeedup * resolutionSpeedMod * mouseGetSensitivity() * CONTROLLER_SPEED_MOD;
+        float gTouchMouseDeltaX = std::pow(std::abs(controllerLeftXAxis), CONTROLLER_AXIS_SPEEDUP) * xSign * deltaTime
+                            * cursorSpeedup * resolutionSpeedMod * mouseGetSensitivity() * CONTROLLER_SPEED_MOD + controllerLeftoverX;
+        float gTouchMouseDeltaY = std::pow(std::abs(controllerLeftYAxis), CONTROLLER_AXIS_SPEEDUP) * ySign * deltaTime
+                            * cursorSpeedup * resolutionSpeedMod * mouseGetSensitivity() * CONTROLLER_SPEED_MOD + controllerLeftoverY;
+
+        controllerLeftoverX = gTouchMouseDeltaX - static_cast<int>(gTouchMouseDeltaX);
+        controllerLeftoverY = gTouchMouseDeltaY - static_cast<int>(gTouchMouseDeltaY);
+
+        int buttonState = 0;
+        if (SDL_GameControllerGetButton(gameController, SDL_CONTROLLER_BUTTON_A)) {
+            buttonState = MOUSE_STATE_LEFT_BUTTON_DOWN;
+        } else if (SDL_GameControllerGetButton(gameController, SDL_CONTROLLER_BUTTON_B)) {
+            buttonState = MOUSE_STATE_RIGHT_BUTTON_DOWN;
+        }
+
+        mouse_simulate_input(gTouchMouseDeltaX, gTouchMouseDeltaY, buttonState);
     }
 }
 

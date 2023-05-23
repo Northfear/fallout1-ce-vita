@@ -8,7 +8,7 @@
 #include "plib/gnw/svga_types.h"
 
 #ifdef __vita__
-#include "dxinput.h"
+#include "touch.h"
 #endif
 
 namespace fallout {
