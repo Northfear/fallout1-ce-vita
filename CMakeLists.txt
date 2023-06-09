@@ -335,6 +335,23 @@ if(APPLE)
     set(MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0")
 endif()
 
+if(VITA)
+    set(VITA_FLAGS "-O2 -g -mcpu=cortex-a9 -mfpu=neon -fno-peephole2 -DNDEBUG")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VITA_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VITA_FLAGS}")
+
+    target_link_libraries(${EXECUTABLE_NAME}
+        SDL2::SDL2
+        SceIme_stub
+        SceAudioIn_stub
+        vita2d
+    )
+
+    include("${CMAKE_SOURCE_DIR}/os/vita/vita.cmake")
+    add_definitions(-D__unix)
+    add_definitions(-D_DEBUG)
+endif()
+
 if((NOT ${CMAKE_SYSTEM_NAME} MATCHES "Linux") AND (NOT ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD") AND NOT VITA)
     add_subdirectory("third_party/sdl2")
 else()
