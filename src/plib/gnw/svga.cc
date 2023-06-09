@@ -170,9 +170,7 @@ static int GNW95_init_mode_ex(int width, int height, int bpp)
             int frontTouch;
             if (config_get_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", &frontTouch)) {
                 frontTouchpadMode = static_cast<TouchpadMode>(frontTouch);
-            }
-            else
-            {
+            } else {
                 config_set_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", 1);
                 config_save(&resolutionConfig, "f1_res.ini", false);
             }
@@ -180,19 +178,10 @@ static int GNW95_init_mode_ex(int width, int height, int bpp)
             int rearTouch;
             if (config_get_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", &rearTouch)) {
                 rearTouchpadMode = static_cast<TouchpadMode>(rearTouch);
-            }
-            else
-            {
+            } else {
                 config_set_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", 0);
                 config_save(&resolutionConfig, "f1_res.ini", false);
             }
-/*
-            // Use FACE_BAR_MODE=1 by default on Vita
-            if (!config_get_value(&resolutionConfig, "IFACE", "IFACE_BAR_MODE", &gInterfaceBarMode)) {
-                config_set_value(&resolutionConfig, "IFACE", "IFACE_BAR_MODE", 1);
-                config_save(&resolutionConfig, "f1_res.ini", false);
-            }
-*/
 #endif
         }
         config_exit(&resolutionConfig);

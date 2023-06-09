@@ -20,7 +20,7 @@
 #include <psp2/power.h>
 #include <psp2/sysmodule.h>
 
-int _newlib_heap_size_user = 224 * 1024 * 1024;
+int _newlib_heap_size_user = 330 * 1024 * 1024;
 #endif
 
 namespace fallout {

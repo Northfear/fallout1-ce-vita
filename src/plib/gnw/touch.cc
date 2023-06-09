@@ -288,11 +288,19 @@ void touch_process_gesture()
             }
 
 #ifdef __vita__
-            if ((touches[active[0]].touchId == 0 && frontTouchpadMode == TouchpadMode::kTouchDirect)
-                || (touches[active[0]].touchId == 1 && rearTouchpadMode == TouchpadMode::kTouchDirect))
+            if (touches[active[0]].touchId == 0 && frontTouchpadMode == TouchpadMode::kTouchDirect)
             {
+                SDL_Rect renderRect = getRenderRect();
+                float width = static_cast<float>(screenGetWidth());
+                float height = static_cast<float>(screenGetHeight());
+
+                int touchPosX = static_cast<float>(VITA_FULLSCREEN_WIDTH * (currentCentroid.x / width) - renderRect.x) *
+                                            (width / renderRect.w);
+                int touchPosY = static_cast<float>(VITA_FULLSCREEN_HEIGHT * (currentCentroid.y / height) - renderRect.y) *
+                                            (height / renderRect.h);
+
                 mouse_hide();
-                mouse_set_position(currentCentroid.x, currentCentroid.y);
+                mouse_set_position(touchPosX, touchPosY);
                 mouse_show();
             }
 #endif
