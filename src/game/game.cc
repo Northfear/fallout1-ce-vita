@@ -124,7 +124,7 @@ DB_DATABASE* master_db_handle;
 DB_DATABASE* critter_db_handle;
 
 // 0x43B080
-int game_init(const char* windowTitle, bool isMapper, int font, int a4, int argc, char** argv)
+int game_init(const char* windowTitle, bool isMapper, int font, int flags, int argc, char** argv)
 {
     char path[COMPAT_MAX_PATH];
 
@@ -142,7 +142,92 @@ int game_init(const char* windowTitle, bool isMapper, int font, int a4, int argc
     }
 
     win_set_minimized_title(windowTitle);
-    initWindow(1, a4);
+
+    VideoOptions video_options;
+    video_options.width = 640;
+    video_options.height = 480;
+    video_options.fullscreen = true;
+    video_options.scale = 1;
+
+    Config resolutionConfig;
+    if (config_init(&resolutionConfig)) {
+        if (config_load(&resolutionConfig, "f1_res.ini", false)) {
+            int screenWidth;
+            if (config_get_value(&resolutionConfig, "MAIN", "SCR_WIDTH", &screenWidth)) {
+                video_options.width = std::max(screenWidth, 640);
+            }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "SCR_WIDTH", VITA_FULLSCREEN_WIDTH);
+                video_options.width = VITA_FULLSCREEN_WIDTH;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
+
+            int screenHeight;
+            if (config_get_value(&resolutionConfig, "MAIN", "SCR_HEIGHT", &screenHeight)) {
+                video_options.height = std::max(screenHeight, 480);
+            }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "SCR_HEIGHT", VITA_FULLSCREEN_HEIGHT);
+                video_options.height = VITA_FULLSCREEN_HEIGHT;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
+
+            bool windowed;
+            if (configGetBool(&resolutionConfig, "MAIN", "WINDOWED", &windowed)) {
+                video_options.fullscreen = !windowed;
+            }
+#ifdef __vita__
+            else
+            {
+                config_set_value(&resolutionConfig, "MAIN", "WINDOWED", 0);
+                video_options.fullscreen = 0;
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
+
+            int scaleValue;
+            if (config_get_value(&resolutionConfig, "MAIN", "SCALE_2X", &scaleValue)) {
+                video_options.scale = scaleValue + 1;
+                video_options.width /= video_options.scale;
+                video_options.height /= video_options.scale;
+            }
+
+#ifdef __vita__
+            // load Vita options here
+            if (video_options.width < DEFAULT_WIDTH) {
+                video_options.width = DEFAULT_WIDTH;
+            }
+            if (video_options.height < DEFAULT_HEIGHT) {
+                video_options.height = DEFAULT_HEIGHT;
+            }
+
+            int frontTouch;
+            if (config_get_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", &frontTouch)) {
+                frontTouchpadMode = static_cast<TouchpadMode>(frontTouch);
+            } else {
+                config_set_value(&resolutionConfig, "VITA", "FRONT_TOUCH_MODE", 1);
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+
+            int rearTouch;
+            if (config_get_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", &rearTouch)) {
+                rearTouchpadMode = static_cast<TouchpadMode>(rearTouch);
+            } else {
+                config_set_value(&resolutionConfig, "VITA", "REAR_TOUCH_MODE", 0);
+                config_save(&resolutionConfig, "f1_res.ini", false);
+            }
+#endif
+        }
+        config_exit(&resolutionConfig);
+    }
+
+    initWindow(&video_options, flags);
     palette_init();
 
     if (!game_in_mapper) {
