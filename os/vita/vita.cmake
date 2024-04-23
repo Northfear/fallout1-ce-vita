@@ -4,7 +4,7 @@ set(VITA_APP_NAME "Fallout CE")
 set(VITA_TITLEID  "FOUT00001")
 
 set(EXECUTABLE_NAME fallout-ce)
-set(VITA_VERSION "01.00")
+set(VITA_VERSION "01.10")
 set(VITA_MKSFOEX_FLAGS "-d ATTRIBUTE2=12")
 
 vita_create_self(${EXECUTABLE_NAME}.self ${EXECUTABLE_NAME})

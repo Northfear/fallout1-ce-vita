@@ -364,7 +364,7 @@ if(VITA)
     add_definitions(-D_DEBUG)
 endif()
 
-if((NOT ${CMAKE_SYSTEM_NAME} MATCHES "Linux") AND (NOT ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD") AND NOT VITA)
+if((NOT ${CMAKE_SYSTEM_NAME} MATCHES "Linux") AND (NOT ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD") AND (NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD") AND NOT VITA)
     add_subdirectory("third_party/sdl2")
 else()
     find_package(SDL2)
@@ -387,13 +387,6 @@ if(APPLE)
         set(CPACK_ARCHIVE_FILE_EXTENSION "ipa")
     else()
         install(TARGETS ${EXECUTABLE_NAME} DESTINATION .)
-
-        if (CPACK_BUNDLE_APPLE_CERT_APP)
-            install(CODE "
-                execute_process(COMMAND codesign --deep --force --options runtime --sign \"${CPACK_BUNDLE_APPLE_CERT_APP}\" ${CMAKE_BINARY_DIR}/Fallout Community Edition.app)
-                "
-                COMPONENT Runtime)
-        endif()
 
         set(CPACK_GENERATOR "DragNDrop")
         set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK ON)
