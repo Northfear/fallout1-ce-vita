@@ -112,6 +112,7 @@ void touch_handle_start(SDL_TouchFingerEvent* event)
     if (index != -1) {
         Touch* touch = &(touches[index]);
         touch->used = true;
+        touch->touchId = event->touchId;
         touch->fingerId = event->fingerId;
         touch->startTimestamp = event->timestamp;
         touch->startLocation.x = static_cast<int>(event->x * screenGetWidth());
