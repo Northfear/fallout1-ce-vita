@@ -348,7 +348,7 @@ if(APPLE)
 endif()
 
 if(VITA)
-    set(VITA_FLAGS "-O2 -g -mcpu=cortex-a9 -mfpu=neon -fno-peephole2 -DNDEBUG")
+    set(VITA_FLAGS "-O2 -mcpu=cortex-a9 -mfpu=neon -DNDEBUG")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VITA_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VITA_FLAGS}")
 
